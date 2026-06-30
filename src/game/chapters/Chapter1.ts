@@ -1,6 +1,9 @@
 import type { GameRuntime } from "../../core/GameRuntime"
 import type { Chapter } from "../../core/Chapter"
 import type { NarrationLine } from "../../core/NarrationSystem"
+import type { Interface } from "readline"
+import { createInterface } from "readline"
+import { stdin, stdout } from "process"
 import { goldilocks } from "../characters/goldilocks"
 
 const chapter1Intro: NarrationLine[] = [
@@ -90,6 +93,29 @@ const chapter1StormScene: NarrationLine[] = [
   },
 ]
 
+function promptChoice(rl: Interface, prompt: string, options: string[]): Promise<number> {
+  return new Promise((resolve) => {
+    const ask = () => {
+      console.log(prompt)
+      options.forEach((option, index) => {
+        console.log(`  [${index + 1}] ${option}`)
+      })
+      rl.question(`Choose 1-${options.length}: `, (answer) => {
+        const choice = Number(answer.trim())
+
+        if (choice >= 1 && choice <= options.length) {
+          resolve(choice)
+        } else {
+          console.log("Please enter a valid choice number.\n")
+          ask()
+        }
+      })
+    }
+
+    ask()
+  })
+}
+
 export const Chapter1: Chapter = {
   number: 1,
   title: "Goldilocks and the Adventure in the Woods",
@@ -109,34 +135,60 @@ export const Chapter1: Chapter = {
       id: "ch1_packing",
       title: "Goldilocks Gets Ready",
       narration: chapter1PackingScene,
-      execute: async (runtime: GameRuntime) => {
+      execute: async (runtime: GameRuntime, rl?: Interface) => {
         runtime.story.gainPageFragment()
-        
+
         console.log("\n🎒 Goldilocks packs her adventuring gear...")
         console.log("💭 CHOICE: Should Goldilocks convince Dad to leave NOW, or wait for perfect weather?")
-        console.log("  [1] Sneak off immediately (Sneak skill)")
-        console.log("  [2] Charm Dad into going despite weather (Charm skill)\n")
-        
-        // Simulate choice 1 - Sneak (using perception-like check)
-        const convinceResult = runtime.interactions.resolve(goldilocks, {
-          id: "convince_dad_to_explore",
-          name: "Convince Dad to Explore",
-          skill: "charm",
-          difficulty: "easy",
-          traitModifiers: [
-            { trait: "curious", bonusDice: 1 },
-            { trait: "playful", bonusDice: 1 },
-          ],
-        })
 
-        if (convinceResult.check.outcome === "success") {
-          console.log("✅ Goldilocks successfully convinces Dad!")
-          runtime.story.gainThread("bond", 1)
+        const choice = rl
+          ? await promptChoice(rl, "Choose how Goldilocks persuades Dad:", [
+              "Sneak off immediately (Sneak skill)",
+              "Charm Dad into going despite weather (Charm skill)",
+            ])
+          : 2
+
+        if (choice === 1) {
+          const sneakResult = runtime.interactions.resolve(goldilocks, {
+            id: "sneak_away",
+            name: "Sneak Away",
+            skill: "sneak",
+            difficulty: "normal",
+            traitModifiers: [
+              { trait: "curious", bonusDice: 1 },
+              { trait: "brave", bonusDice: 1 },
+            ],
+          })
+
+          if (sneakResult.check.outcome === "success") {
+            console.log("✅ Goldilocks slips out while Dad is distracted!")
+            runtime.story.gainThread("curiosity", 1)
+            runtime.story.gainThread("bond", 1)
+          } else {
+            console.log("⚠️ The plan doesn't work; Dad wants to wait.")
+            runtime.story.gainThread("humor", 1)
+          }
         } else {
-          console.log("⚠️ Dad wants to wait for better weather...")
-          runtime.story.gainThread("humor", 1) // Dad's cautious patience
+          const charmResult = runtime.interactions.resolve(goldilocks, {
+            id: "charm_dad",
+            name: "Charm Dad",
+            skill: "charm",
+            difficulty: "easy",
+            traitModifiers: [
+              { trait: "curious", bonusDice: 1 },
+              { trait: "playful", bonusDice: 1 },
+            ],
+          })
+
+          if (charmResult.check.outcome === "success") {
+            console.log("✅ Goldilocks charms Dad into leaving!")
+            runtime.story.gainThread("bond", 1)
+          } else {
+            console.log("⚠️ Dad hesitates, but he still cares.")
+            runtime.story.gainThread("humor", 1)
+          }
         }
-        
+
         console.log(runtime.story.getSummary())
         return "neutral"
       },
@@ -156,38 +208,47 @@ export const Chapter1: Chapter = {
       id: "ch1_hiking",
       title: "Into the Forest",
       narration: chapter1HikingScene,
-      execute: async (runtime: GameRuntime) => {
+      execute: async (runtime: GameRuntime, rl?: Interface) => {
         runtime.story.gainThread("bond", 1)
-        
+
         console.log("\n🏞️ A peaceful day of exploration and learning...")
         console.log("💭 CHOICE: Look for something special while at the creek?")
-        console.log("  [1] Search for hidden creatures (Perception skill)")
-        console.log("  [2] Focus on learning from Dad (Bond building)\n")
-        
-        // Simulate perception check
-        const percResult = runtime.interactions.resolve(goldilocks, {
-          id: "search_creek_secrets",
-          name: "Search for Hidden Creatures",
-          skill: "perception",
-          difficulty: "normal",
-          traitModifiers: [
-            { trait: "curious", bonusDice: 2 },
-            { trait: "brave", bonusDice: 1 },
-          ],
-        })
 
-        if (percResult.check.outcome === "success") {
-          console.log("🔍 Goldilocks discovers a secret pool with rare frogs!")
-          runtime.story.gainThread("curiosity", 1)
-          runtime.story.gainEcho()
-          if (percResult.check.isCriticalSuccess) {
-            console.log("🔥 Critical! She finds a pristine emerald frog—incredibly rare!")
+        const choice = rl
+          ? await promptChoice(rl, "Choose how Goldilocks spends time at the creek:", [
+              "Search for hidden creatures (Perception skill)",
+              "Focus on learning from Dad (Bond building)",
+            ])
+          : 1
+
+        if (choice === 1) {
+          const percResult = runtime.interactions.resolve(goldilocks, {
+            id: "search_creek_secrets",
+            name: "Search for Hidden Creatures",
+            skill: "perception",
+            difficulty: "normal",
+            traitModifiers: [
+              { trait: "curious", bonusDice: 2 },
+              { trait: "brave", bonusDice: 1 },
+            ],
+          })
+
+          if (percResult.check.outcome === "success") {
+            console.log("🔍 Goldilocks discovers a secret pool with rare frogs!")
+            runtime.story.gainThread("curiosity", 1)
+            runtime.story.gainEcho()
+            if (percResult.check.isCriticalSuccess) {
+              console.log("🔥 Critical! She finds a pristine emerald frog—incredibly rare!")
+            }
+          } else {
+            console.log("⚠️ Nothing unusual catches her eye, but Dad's lessons are valuable.")
+            runtime.story.gainThread("bond", 1)
           }
         } else {
-          console.log("⚠️ Nothing unusual catches her eye, but Dad's lessons are valuable.")
-          runtime.story.gainThread("bond", 1)
+          console.log("🤝 Goldilocks listens to Dad and grows closer to him.")
+          runtime.story.gainThread("bond", 2)
         }
-        
+
         console.log(runtime.story.getSummary())
         return "neutral"
       },
@@ -196,49 +257,81 @@ export const Chapter1: Chapter = {
       id: "ch1_storm",
       title: "The Rabbit Panic",
       narration: chapter1StormScene,
-      execute: async (runtime: GameRuntime) => {
+      execute: async (runtime: GameRuntime, rl?: Interface) => {
         runtime.story.gainThread("fear", 1)
         runtime.story.gainPageFragment()
-        
+
         console.log("\n⚡ A harrowing escape leads to an old cabin...")
         console.log("💭 CRITICAL MOMENT: Can Goldilocks guide them to safety?")
-        console.log("  [1] Trust her perception of the cabin (Perception check)")
-        console.log("  [2] Help Dad stay brave (Bond check - calm him down)\n")
-        
-        // Perception check to spot the cabin
-        const spotCabinResult = runtime.interactions.resolve(goldilocks, {
-          id: "spot_cabin_in_storm",
-          name: "Spot the Cabin",
-          skill: "perception",
-          difficulty: "hard",
-          traitModifiers: [
-            { trait: "curious", bonusDice: 1 },
-            { trait: "brave", bonusDice: 1 },
-          ],
-        })
 
-        if (spotCabinResult.check.outcome === "success") {
-          console.log("✅ Goldilocks spots the cabin and guides them safely!")
-          runtime.story.gainThread("bond", 1) // Trust and teamwork
-          if (spotCabinResult.check.isCriticalSuccess) {
-            console.log("🔥 Critical! She sees a light in the window—someone's home!")
-            runtime.story.gainEcho()
+        const choice = rl
+          ? await promptChoice(rl, "Choose Goldilocks's response:", [
+              "Trust her perception of the cabin (Perception check)",
+              "Help Dad stay brave (Humor check to calm him)",
+            ])
+          : 1
+
+        if (choice === 1) {
+          const spotCabinResult = runtime.interactions.resolve(goldilocks, {
+            id: "spot_cabin_in_storm",
+            name: "Spot the Cabin",
+            skill: "perception",
+            difficulty: "hard",
+            traitModifiers: [
+              { trait: "curious", bonusDice: 1 },
+              { trait: "brave", bonusDice: 1 },
+            ],
+          })
+
+          if (spotCabinResult.check.outcome === "success") {
+            console.log("✅ Goldilocks spots the cabin and guides them safely!")
+            runtime.story.gainThread("bond", 1)
+            if (spotCabinResult.check.isCriticalSuccess) {
+              console.log("🔥 Critical! She sees a light in the window—someone's home!")
+              runtime.story.gainEcho()
+            }
+          } else {
+            console.log("⚠️ They barely make it to shelter before the storm gets worse.")
+            runtime.story.gainPageFragment()
+            if (spotCabinResult.check.hasComplication) {
+              console.log("💥 Complication! Dad twists his ankle in the chaos.")
+              runtime.story.gainThread("fear", 1)
+            }
           }
         } else {
-          console.log("⚠️ They barely make it to shelter before the storm gets worse.")
-          runtime.story.gainPageFragment()
-          if (spotCabinResult.check.hasComplication) {
-            console.log("💥 Complication! Dad twists his ankle in the chaos.")
+          const calmDadResult = runtime.interactions.resolve(goldilocks, {
+            id: "calm_dad_in_storm",
+            name: "Calm Dad in Storm",
+            skill: "humor",
+            difficulty: "normal",
+            traitModifiers: [
+              { trait: "playful", bonusDice: 2 },
+              { trait: "brave", bonusDice: 1 },
+            ],
+          })
+
+          if (calmDadResult.check.outcome === "success") {
+            console.log("✅ Goldilocks keeps Dad calm and together.")
+            runtime.story.gainThread("bond", 1)
+            runtime.story.gainThread("humor", 1)
+          } else {
+            console.log("⚠️ Dad is rattled, but they keep moving.")
             runtime.story.gainThread("fear", 1)
+            if (calmDadResult.check.hasComplication) {
+              console.log("💥 Complication! They lose sight of the cabin for a moment.")
+              runtime.story.gainPageFragment()
+            }
           }
         }
-        
+
         console.log(runtime.story.getSummary())
         return "complication"
       },
     },
   ],
   run: async (runtime: GameRuntime) => {
+    const rl = createInterface({ input: stdin, output: stdout })
+
     console.log("\n" + "=".repeat(60))
     console.log(`📕 CHAPTER ${Chapter1.number}: ${Chapter1.title}`)
     console.log("=".repeat(60))
@@ -252,9 +345,11 @@ export const Chapter1: Chapter = {
       })
 
       // Execute scene
-      await scene.execute(runtime)
+      await scene.execute(runtime, rl)
       console.log("")
     }
+
+    rl.close()
 
     console.log("\n" + "=".repeat(60))
     console.log("📝 End of Chapter 1")

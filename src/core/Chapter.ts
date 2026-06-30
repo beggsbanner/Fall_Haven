@@ -1,4 +1,5 @@
 import type { GameRuntime } from "./GameRuntime"
+import type { Interface } from "readline"
 import type { NarrationLine } from "./NarrationSystem"
 
 export type SceneOutcome = "success" | "failure" | "neutral" | "complication"
@@ -20,7 +21,7 @@ export interface Scene {
   id: string
   title: string
   narration: NarrationLine[]
-  execute: (runtime: GameRuntime) => Promise<SceneOutcome>
+  execute: (runtime: GameRuntime, rl?: Interface) => Promise<SceneOutcome>
 }
 
 export interface Chapter {
