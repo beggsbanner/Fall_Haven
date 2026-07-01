@@ -1,5 +1,7 @@
 import { EventBus } from "./EventBus"
 import { InteractionResolver } from "../interactions/InteractionResolver"
+import { QuestManager } from "./QuestManager"
+import { AgencySystem } from "./AgencySystem"
 import { StoryState } from "./StoryState"
 
 export type RuntimeStatus = "created" | "running" | "paused" | "stopped"
@@ -7,6 +9,8 @@ export type RuntimeStatus = "created" | "running" | "paused" | "stopped"
 export class GameRuntime {
   readonly eventBus: EventBus
   readonly interactions: InteractionResolver
+  readonly questManager: QuestManager
+  readonly agency: AgencySystem
   readonly story: StoryState
 
   private status: RuntimeStatus = "created"
@@ -14,8 +18,10 @@ export class GameRuntime {
 
   constructor() {
     this.eventBus = new EventBus()
-    this.interactions = new InteractionResolver(this.eventBus)
     this.story = new StoryState()
+    this.interactions = new InteractionResolver(this.eventBus)
+    this.questManager = new QuestManager(this.eventBus, this.story)
+    this.agency = new AgencySystem(this)
   }
 
   start(): void {

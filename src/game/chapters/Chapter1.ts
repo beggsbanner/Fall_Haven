@@ -1,10 +1,12 @@
 import type { GameRuntime } from "../../core/GameRuntime"
 import type { Chapter } from "../../core/Chapter"
 import type { NarrationLine } from "../../core/NarrationSystem"
+import type { ChoiceEffect } from "../../core/Choice"
 import type { Interface } from "readline"
 import { createInterface } from "readline"
 import { stdin, stdout } from "process"
 import { goldilocks } from "../characters/goldilocks"
+import { printQuestJournal, promptChoiceWithJournal } from "./ChapterUtils"
 
 const chapter1Intro: NarrationLine[] = [
   {
@@ -93,28 +95,6 @@ const chapter1StormScene: NarrationLine[] = [
   },
 ]
 
-function promptChoice(rl: Interface, prompt: string, options: string[]): Promise<number> {
-  return new Promise((resolve) => {
-    const ask = () => {
-      console.log(prompt)
-      options.forEach((option, index) => {
-        console.log(`  [${index + 1}] ${option}`)
-      })
-      rl.question(`Choose 1-${options.length}: `, (answer) => {
-        const choice = Number(answer.trim())
-
-        if (choice >= 1 && choice <= options.length) {
-          resolve(choice)
-        } else {
-          console.log("Please enter a valid choice number.\n")
-          ask()
-        }
-      })
-    }
-
-    ask()
-  })
-}
 
 export const Chapter1: Chapter = {
   number: 1,
@@ -141,53 +121,78 @@ export const Chapter1: Chapter = {
         console.log("\n🎒 Goldilocks packs her adventuring gear...")
         console.log("💭 CHOICE: Should Goldilocks convince Dad to leave NOW, or wait for perfect weather?")
 
-        const choice = rl
-          ? await promptChoice(rl, "Choose how Goldilocks persuades Dad:", [
-              "Sneak off immediately (Sneak skill)",
-              "Charm Dad into going despite weather (Charm skill)",
-            ])
-          : 2
+        const packingChoices: Array<{
+        id: string
+        label: string
+        effects: ChoiceEffect[]
+      }> = [
+        {
+          id: "sneak_off",
+          label: "Sneak off immediately (Sneak skill)",
+          effects: [
+            { type: "thread", thread: "curiosity", amount: 1 },
+            { type: "thread", thread: "bond", amount: 1 },
+            { type: "message", text: "You choose a daring route; the story feels more alive." },
+          ],
+        },
+        {
+          id: "charm_dad",
+          label: "Charm Dad into going despite weather (Charm skill)",
+          effects: [
+            { type: "thread", thread: "bond", amount: 1 },
+            { type: "message", text: "Your charm helps Dad open up to the adventure." },
+          ],
+        },
+      ]
 
-        if (choice === 1) {
-          const sneakResult = runtime.interactions.resolve(goldilocks, {
-            id: "sneak_away",
-            name: "Sneak Away",
-            skill: "sneak",
-            difficulty: "normal",
-            traitModifiers: [
-              { trait: "curious", bonusDice: 1 },
-              { trait: "brave", bonusDice: 1 },
-            ],
-          })
+      const choiceIndex = rl
+        ? await promptChoiceWithJournal(
+            rl,
+            "Choose how Goldilocks persuades Dad:",
+            packingChoices.map((choice) => choice.label),
+            () => printQuestJournal(runtime.questManager),
+          )
+        : 2
+      const selectedChoice = packingChoices[choiceIndex - 1]
+      runtime.agency.applyEffects(1, "ch1_packing", selectedChoice.id, selectedChoice.label, selectedChoice.effects)
 
-          if (sneakResult.check.outcome === "success") {
-            console.log("✅ Goldilocks slips out while Dad is distracted!")
-            runtime.story.gainThread("curiosity", 1)
-            runtime.story.gainThread("bond", 1)
-          } else {
-            console.log("⚠️ The plan doesn't work; Dad wants to wait.")
-            runtime.story.gainThread("humor", 1)
-          }
+      if (selectedChoice.id === "sneak_off") {
+        const sneakResult = runtime.interactions.resolve(goldilocks, {
+          id: "sneak_away",
+          name: "Sneak Away",
+          skill: "sneak",
+          difficulty: "normal",
+          traitModifiers: [
+            { trait: "curious", bonusDice: 1 },
+            { trait: "brave", bonusDice: 1 },
+          ],
+        })
+
+        if (sneakResult.check.outcome === "success") {
+          console.log("✅ Goldilocks slips out while Dad is distracted!")
         } else {
-          const charmResult = runtime.interactions.resolve(goldilocks, {
-            id: "charm_dad",
-            name: "Charm Dad",
-            skill: "charm",
-            difficulty: "easy",
-            traitModifiers: [
-              { trait: "curious", bonusDice: 1 },
-              { trait: "playful", bonusDice: 1 },
-            ],
-          })
-
-          if (charmResult.check.outcome === "success") {
-            console.log("✅ Goldilocks charms Dad into leaving!")
-            runtime.story.gainThread("bond", 1)
-          } else {
-            console.log("⚠️ Dad hesitates, but he still cares.")
-            runtime.story.gainThread("humor", 1)
-          }
+          console.log("⚠️ The plan doesn't work; Dad wants to wait.")
+          runtime.story.gainThread("humor", 1)
         }
+      } else {
+        const charmResult = runtime.interactions.resolve(goldilocks, {
+          id: "charm_dad",
+          name: "Charm Dad",
+          skill: "charm",
+          difficulty: "easy",
+          traitModifiers: [
+            { trait: "curious", bonusDice: 1 },
+            { trait: "playful", bonusDice: 1 },
+          ],
+        })
+
+        if (charmResult.check.outcome === "success") {
+          console.log("✅ Goldilocks charms Dad into leaving!")
+        } else {
+          console.log("⚠️ Dad hesitates, but he still cares.")
+          runtime.story.gainThread("humor", 1)
+        }
+      }
 
         console.log(runtime.story.getSummary())
         return "neutral"
@@ -214,14 +219,42 @@ export const Chapter1: Chapter = {
         console.log("\n🏞️ A peaceful day of exploration and learning...")
         console.log("💭 CHOICE: Look for something special while at the creek?")
 
-        const choice = rl
-          ? await promptChoice(rl, "Choose how Goldilocks spends time at the creek:", [
-              "Search for hidden creatures (Perception skill)",
-              "Focus on learning from Dad (Bond building)",
-            ])
-          : 1
+        const creekChoices: Array<{
+          id: string
+          label: string
+          effects: ChoiceEffect[]
+        }> = [
+          {
+            id: "search_creek",
+            label: "Search for hidden creatures (Perception skill)",
+            effects: [
+              { type: "thread", thread: "curiosity", amount: 1 },
+              { type: "pageFragment", amount: 1 },
+              { type: "message", text: "Your curiosity digs up a hidden story thread." },
+            ],
+          },
+          {
+            id: "learn_from_dad",
+            label: "Focus on learning from Dad (Bond building)",
+            effects: [
+              { type: "thread", thread: "bond", amount: 2 },
+              { type: "message", text: "Spending time with Dad strengthens your bond." },
+            ],
+          },
+        ]
 
-        if (choice === 1) {
+        const creekChoiceIndex = rl
+          ? await promptChoiceWithJournal(
+              rl,
+              "Choose how Goldilocks spends time at the creek:",
+              creekChoices.map((choice) => choice.label),
+              () => printQuestJournal(runtime.questManager),
+            )
+          : 1
+        const selectedCreekChoice = creekChoices[creekChoiceIndex - 1]
+        runtime.agency.applyEffects(1, "ch1_hiking", selectedCreekChoice.id, selectedCreekChoice.label, selectedCreekChoice.effects)
+
+        if (selectedCreekChoice.id === "search_creek") {
           const percResult = runtime.interactions.resolve(goldilocks, {
             id: "search_creek_secrets",
             name: "Search for Hidden Creatures",
@@ -235,7 +268,6 @@ export const Chapter1: Chapter = {
 
           if (percResult.check.outcome === "success") {
             console.log("🔍 Goldilocks discovers a secret pool with rare frogs!")
-            runtime.story.gainThread("curiosity", 1)
             runtime.story.gainEcho()
             if (percResult.check.isCriticalSuccess) {
               console.log("🔥 Critical! She finds a pristine emerald frog—incredibly rare!")
@@ -246,7 +278,6 @@ export const Chapter1: Chapter = {
           }
         } else {
           console.log("🤝 Goldilocks listens to Dad and grows closer to him.")
-          runtime.story.gainThread("bond", 2)
         }
 
         console.log(runtime.story.getSummary())
@@ -264,12 +295,50 @@ export const Chapter1: Chapter = {
         console.log("\n⚡ A harrowing escape leads to an old cabin...")
         console.log("💭 CRITICAL MOMENT: Can Goldilocks guide them to safety?")
 
-        const choice = rl
-          ? await promptChoice(rl, "Choose Goldilocks's response:", [
-              "Trust her perception of the cabin (Perception check)",
-              "Help Dad stay brave (Humor check to calm him)",
-            ])
+        const sideQuest = runtime.questManager.getQuest("rabbit_rescue")
+        if (sideQuest && sideQuest.status === "available") {
+          console.log("\n🧭 Side quest available: Protect the Rabbit Family")
+          console.log(`  ${sideQuest.description}`)
+          runtime.questManager.acceptQuest(sideQuest.id)
+          console.log("🟩 Quest accepted: Protect the Rabbit Family")
+          printQuestJournal(runtime.questManager)
+        }
+
+        const stormChoices: Array<{
+          id: string
+          label: string
+          effects: ChoiceEffect[]
+        }> = [
+          {
+            id: "trust_perception",
+            label: "Trust her perception of the cabin (Perception check)",
+            effects: [
+              { type: "thread", thread: "bond", amount: 1 },
+              { type: "message", text: "Goldilocks trusts her instincts and leads the way." },
+            ],
+          },
+          {
+            id: "calm_dad",
+            label: "Help Dad stay brave (Humor check to calm him)",
+            effects: [
+              { type: "thread", thread: "humor", amount: 1 },
+              { type: "message", text: "A quick joke keeps Dad moving despite the fear." },
+            ],
+          },
+        ]
+
+        const stormChoiceIndex = rl
+          ? await promptChoiceWithJournal(
+              rl,
+              "Choose Goldilocks's response:",
+              stormChoices.map((choice) => choice.label),
+              () => printQuestJournal(runtime.questManager),
+            )
           : 1
+        const selectedStormChoice = stormChoices[stormChoiceIndex - 1]
+        runtime.agency.applyEffects(1, "ch1_storm", selectedStormChoice.id, selectedStormChoice.label, selectedStormChoice.effects)
+
+        const choice = stormChoiceIndex
 
         if (choice === 1) {
           const spotCabinResult = runtime.interactions.resolve(goldilocks, {
@@ -329,8 +398,8 @@ export const Chapter1: Chapter = {
       },
     },
   ],
-  run: async (runtime: GameRuntime) => {
-    const rl = createInterface({ input: stdin, output: stdout })
+  run: async (runtime: GameRuntime, rl?: Interface) => {
+    const localRl = rl ?? createInterface({ input: stdin, output: stdout })
 
     console.log("\n" + "=".repeat(60))
     console.log(`📕 CHAPTER ${Chapter1.number}: ${Chapter1.title}`)
@@ -345,11 +414,13 @@ export const Chapter1: Chapter = {
       })
 
       // Execute scene
-      await scene.execute(runtime, rl)
+      await scene.execute(runtime, localRl)
       console.log("")
     }
 
-    rl.close()
+    if (!rl) {
+      localRl.close()
+    }
 
     console.log("\n" + "=".repeat(60))
     console.log("📝 End of Chapter 1")

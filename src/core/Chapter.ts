@@ -1,6 +1,7 @@
 import type { GameRuntime } from "./GameRuntime"
 import type { Interface } from "readline"
 import type { NarrationLine } from "./NarrationSystem"
+import type { ChoiceEffect } from "./Choice"
 
 export type SceneOutcome = "success" | "failure" | "neutral" | "complication"
 
@@ -11,6 +12,7 @@ export interface SceneChoice {
     skill: string
     difficulty: "easy" | "normal" | "hard"
   }
+  effects?: ChoiceEffect[]
   threads?: {
     thread: string
     amount: number
@@ -28,5 +30,5 @@ export interface Chapter {
   number: number
   title: string
   scenes: Scene[]
-  run: (runtime: GameRuntime) => Promise<void>
+  run: (runtime: GameRuntime, rl?: Interface) => Promise<void>
 }

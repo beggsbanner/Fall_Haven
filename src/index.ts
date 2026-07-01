@@ -1,12 +1,17 @@
+import { createInterface } from "readline"
+import { stdin, stdout } from "process"
 import { GameRuntime } from "./core/GameRuntime"
 import { runGoblinPatrolScenario } from "./game/scenarios/GoblinPatrol"
 import { ScenarioManager } from "./game/scenarios/ScenarioManager"
-import { Chapter1 } from "./game/chapters/Chapter1"
+import { chapters } from "./game/chapters/ChapterRegistry"
+import { quests } from "./game/quests/QuestDefinitions"
+import { printQuestJournal, promptContinueOrJournal } from "./game/chapters/ChapterUtils"
 
 console.log("✅ INDEX FILE STARTED")
 
 const runtime = new GameRuntime()
 const scenarioManager = new ScenarioManager()
+const rl = createInterface({ input: stdin, output: stdout })
 
 // =========================
 // Event Listeners
@@ -43,7 +48,7 @@ runtime.start()
 console.log("✅ RUNTIME STARTED")
 
 // =========================
-// Run Scenario
+// Run Chapters
 // =========================
 
 scenarioManager.register({
@@ -52,8 +57,28 @@ scenarioManager.register({
   run: runGoblinPatrolScenario,
 })
 
-console.log("✅ ABOUT TO RUN CHAPTER 1")
+for (const quest of quests) {
+  runtime.questManager.registerQuest(quest)
+}
 
-Chapter1.run(runtime)
+console.log("✅ ABOUT TO RUN ALL CHAPTERS")
 
-console.log("✅ INDEX FILE FINISHED")
+async function runAllChapters(): Promise<void> {
+  for (const chapter of chapters) {
+    await chapter.run(runtime)
+    runtime.story.recordChapterSummary(chapter.number, chapter.title)
+
+    console.log(`\n📖 Chapter ${chapter.number} summary recorded.`)
+    printQuestJournal(runtime.questManager)
+    await promptContinueOrJournal(rl, () => printQuestJournal(runtime.questManager))
+  }
+
+  rl.close()
+
+  console.log("✅ INDEX FILE FINISHED")
+}
+
+runAllChapters().catch((error) => {
+  console.error("Fatal error while running chapters:", error)
+  process.exit(1)
+})

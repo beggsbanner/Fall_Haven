@@ -1,10 +1,18 @@
 export type StoryThreadName = "curiosity" | "humor" | "fear" | "bond"
 export type StoryTone = "calm" | "curious" | "playful" | "tense" | "fractured"
 
+export type ChapterSummary = {
+  chapter: number
+  title: string
+  storyTone: StoryTone
+  summary: ReturnType<StoryState["getSummary"]>
+}
+
 export class StoryState {
   private readonly threads = new Map<StoryThreadName, number>()
   private pageFragments = 0
   private echoes = 0
+  private chapterSummaries: ChapterSummary[] = []
 
   gainThread(thread: StoryThreadName, amount = 1): void {
     const current = this.threads.get(thread) ?? 0
@@ -67,6 +75,19 @@ export class StoryState {
 
     this.pageFragments -= amount
     return true
+  }
+
+  recordChapterSummary(chapter: number, title: string): void {
+    this.chapterSummaries.push({
+      chapter,
+      title,
+      storyTone: this.getStoryTone(),
+      summary: this.getSummary(),
+    })
+  }
+
+  getChapterSummaries(): ChapterSummary[] {
+    return [...this.chapterSummaries]
   }
 
   getSummary() {

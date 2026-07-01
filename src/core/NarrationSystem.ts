@@ -3,6 +3,7 @@ export type NarrationStyle = "calm" | "curious" | "playful" | "tense" | "fractur
 export interface NarrationLine {
   text: string
   style: NarrationStyle
+  speaker?: string
   delay?: number
 }
 
@@ -18,6 +19,11 @@ export class NarrationSystem {
   }
 
   formatNarration(lines: NarrationLine[]): string {
-    return lines.map((line) => `[${line.style.toUpperCase()}] ${line.text}`).join("\n\n")
+    return lines
+      .map((line) => {
+        const prefix = line.speaker ? `${line.speaker}: ` : ""
+        return `[${line.style.toUpperCase()}] ${prefix}${line.text}`
+      })
+      .join("\n\n")
   }
 }
