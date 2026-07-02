@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "ts-node src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "book:generate": "node scripts/generateBookPage.js",
+    "book:serve": "node scripts/serveBook.js"
   },
   "keywords": [],
   "author": "",

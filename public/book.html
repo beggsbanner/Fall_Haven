@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fall Haven Book Viewer</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, sans-serif;
+        background: #0e1117;
+        color: #e6edf3;
+      }
+      header {
+        padding: 24px;
+        background: linear-gradient(180deg, #1b2940, #112436);
+        border-bottom: 1px solid #25303f;
+      }
+      h1 {
+        margin: 0;
+        font-size: 2rem;
+      }
+      .container {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        min-height: 100vh;
+      }
+      nav {
+        background: #131b26;
+        border-right: 1px solid #25303f;
+        padding: 16px;
+      }
+      nav h2 {
+        margin-top: 0;
+        font-size: 1rem;
+        color: #8ba7c2;
+      }
+      nav button {
+        width: 100%;
+        border: 0;
+        margin: 4px 0;
+        padding: 12px 14px;
+        text-align: left;
+        color: #e6edf3;
+        background: #161f2d;
+        cursor: pointer;
+        border-radius: 8px;
+      }
+      nav button.active {
+        background: #1f4c89;
+      }
+      main {
+        padding: 24px;
+      }
+      main h2 {
+        margin-top: 0;
+      }
+      .paragraph {
+        margin-bottom: 1rem;
+        line-height: 1.7;
+      }
+      .footer {
+        margin-top: 32px;
+        padding-top: 16px;
+        border-top: 1px solid #25303f;
+        color: #8ba7c2;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Fall Haven Book Viewer</h1>
+      <p>Browse chapters from the source text in a simple web page.</p>
+    </header>
+    <div class="container">
+      <nav>
+        <h2>Chapters</h2>
+        <div id="chapterList"></div>
+      </nav>
+      <main>
+        <section id="chapterContent">
+          <div class="controls">
+            <button id="prevChapter">Prev</button>
+            <button id="nextChapter">Next</button>
+          </div>
+          <h2>Select a chapter</h2>
+          <div id="chapterParagraphs"></div>
+          <div class="footer">Use the chapter list on the left or the buttons above to navigate.</div>
+        </section>
+      </main>
+    </div>
+    <script src="book-data.js"></script>
+    <script>
+      const chapterList = document.getElementById("chapterList")
+      const chapterContent = document.getElementById("chapterContent")
+      let currentIndex = 0
+
+      function updateButtons() {
+        const prevChapterButton = document.getElementById("prevChapter")
+        const nextChapterButton = document.getElementById("nextChapter")
+        if (prevChapterButton) prevChapterButton.disabled = currentIndex <= 0
+        if (nextChapterButton) nextChapterButton.disabled = currentIndex >= window.bookChapters.length - 1
+      }
+
+      function renderChapter(index) {
+        currentIndex = index
+        const chapter = window.bookChapters[index]
+        const chapterButtonsList = document.querySelectorAll("nav button")
+        chapterButtonsList.forEach((btn, btnIndex) => btn.classList.toggle("active", btnIndex === index))
+
+        chapterContent.innerHTML = `
+          <div class="controls">
+            <button id="prevChapter">Prev</button>
+            <button id="nextChapter">Next</button>
+          </div>
+          <h2>${chapter.number === 99 ? "Epilogue" : `Chapter ${chapter.number}`}: ${chapter.title}</h2>
+          <div id="chapterParagraphs"></div>
+          <div class="footer">${chapter.paragraphs.length} paragraphs</div>
+        `
+
+        const paragraphContainer = document.getElementById("chapterParagraphs")
+        paragraphContainer.innerHTML = chapter.paragraphs
+          .map((paragraph) => `<div class="paragraph">${paragraph}</div>`)
+          .join("")
+
+        document.getElementById("prevChapter").addEventListener("click", () => {
+          if (currentIndex > 0) renderChapter(currentIndex - 1)
+        })
+        document.getElementById("nextChapter").addEventListener("click", () => {
+          if (currentIndex < window.bookChapters.length - 1) renderChapter(currentIndex + 1)
+        })
+
+        updateButtons()
+      }
+
+      window.bookChapters.forEach((chapter, index) => {
+        const button = document.createElement("button")
+        button.textContent = chapter.number === 99 ? `Epilogue: ${chapter.title}` : `Chapter ${chapter.number}: ${chapter.title}`
+        button.addEventListener("click", () => renderChapter(index))
+        chapterList.appendChild(button)
+      })
+
+      if (window.bookChapters.length) {
+        renderChapter(0)
+      }
+    </script>
+  </body>
+</html>

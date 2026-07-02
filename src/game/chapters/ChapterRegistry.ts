@@ -27,7 +27,19 @@ import { Chapter23 } from "./Chapter23"
 import { Chapter24 } from "./Chapter24"
 import { Chapter25 } from "./Chapter25"
 import { Chapter26 } from "./Chapter26"
+import { Chapter27 } from "./Chapter27"
+import { Chapter28 } from "./Chapter28"
+import { Chapter29 } from "./Chapter29"
+import { Chapter30 } from "./Chapter30"
+import { Chapter31 } from "./Chapter31"
+import { Chapter32 } from "./Chapter32"
+import { Chapter33 } from "./Chapter33"
+import { Chapter34 } from "./Chapter34"
+import { Chapter35 } from "./Chapter35"
+import { Chapter36 } from "./Chapter36"
+import { Chapter99 } from "./Chapter99"
 import { loadBookChapters } from "./BookChapterLoader"
+// Future expansion: Book 2 chapter loader can be added here when the next story arc is ready.
 
 const actTitles = [
   "Wonder",
@@ -162,7 +174,18 @@ const bookChapters = loadBookChapters().filter(
     chapter.number !== 23 &&
     chapter.number !== 24 &&
     chapter.number !== 25 &&
-    chapter.number !== 26,
+    chapter.number !== 26 &&
+    chapter.number !== 27 &&
+    chapter.number !== 28 &&
+    chapter.number !== 29 &&
+    chapter.number !== 30 &&
+    chapter.number !== 31 &&
+    chapter.number !== 32 &&
+    chapter.number !== 33 &&
+    chapter.number !== 34 &&
+    chapter.number !== 35 &&
+    chapter.number !== 36 &&
+    chapter.number !== 99,
 )
 
 export const chapters: Chapter[] = [
@@ -192,5 +215,16 @@ export const chapters: Chapter[] = [
   Chapter24,
   Chapter25,
   Chapter26,
+  Chapter27,
+  Chapter28,
+  Chapter29,
+  Chapter30,
+  Chapter31,
+  Chapter32,
+  Chapter33,
+  Chapter34,
+  Chapter35,
+  Chapter36,
+  Chapter99,
   ...bookChapters,
 ]
